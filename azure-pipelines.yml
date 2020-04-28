@@ -1,0 +1,94 @@
+# Node.js
+
+# Build a general Node.js project with npm.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
+
+trigger:
+  branches:
+    include:
+      - develop
+      - release
+      - master
+  paths:
+    include:
+    - src
+    - bin
+    - public
+    - azure-pipelines.yml
+
+pool:
+  vmImage: 'Ubuntu-16.04'
+
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: '10.x'
+  displayName: 'Install Node.js'
+
+- script: |
+    npm install
+    npm run build
+  displayName: 'npm install & build'
+  
+# - task: CopyFiles@2
+#   inputs:
+#     SourceFolder: '$(Build.SourcesDirectory)'
+#     Contents: |
+#       *.json
+#       *.config
+#     TargetFolder: '$(Build.SourcesDirectory)/package'
+
+- task: ArchiveFiles@2
+  inputs:
+    rootFolderOrFile: '$(Build.SourcesDirectory)/dist/build/h5'
+    includeRootFolder: false
+    archiveFile: '$(Build.ArtifactStagingDirectory)/front.zip'
+    replaceExistingArchive: true
+
+- task: PublishBuildArtifacts@1
+
+
+- task: CopyFilesOverSSH@0
+  inputs:
+    sshEndpoint: 'Remote'
+    sourceFolder: '$(Build.ArtifactStagingDirectory)/'
+    contents: 'front.zip'
+    targetFolder: '~/'
+    readyTimeout: '20000'
+  
+- task: SSH@0
+  inputs:
+    sshEndpoint: 'Remote'
+    runOptions: 'commands'
+    commands: 'rm -rf wwwroot/dist/public/static && rm -rf wwwroot/dist/public/index.html && unzip -o ./front.zip -d ./wwwroot/dist/public'
+    readyTimeout: '20000'
+    
+
+# - task: AzureRmWebAppDeployment@4
+#   inputs:
+#     ConnectionType: 'AzureRM'
+#     azureSubscription: 'AzureChinaVerified'
+#     appType: 'webApp'
+#     WebAppName: 'auction'
+#     packageForLinux: '$(Build.ArtifactStagingDirectory)/*.zip'
+#     ScriptType: 'Inline Script'
+#     InlineScript: 'npm install'
+    
+    
+# - task: AzureRmWebAppDeployment@4
+#   inputs:
+#     ConnectedServiceName: 'Visual Studio Enterprise(1fb2f34c-52f9-4a67-94a3-08006774a48c)'
+#     WebAppKind: 'webAppLinux'
+#     WebAppName: 'windart-origin-api'
+#     Package: '$(Build.ArtifactStagingDirectory)/hosts.zip'
+#     RuntimeStack: 'NODE|10.14'
+#     StartupCommand: 'node production.js'
+
+# - task: AzureRmWebAppDeployment@4
+#   inputs:
+#     ConnectedServiceName: 'AzureChinaVerified'
+#     WebAppName: 'windart-api'
+#     Package: '$(Build.ArtifactStagingDirectory)/hosts.zip'
+
+
